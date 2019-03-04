@@ -15,20 +15,22 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("connected!!")
     #監視対象ソケットに追加(clientなので一つ)
     readfds = set([s])
-    #受信を監視
-    rready, wready, xready = select.select(readfds, [], [])
     inputTh = threading.Thread(target=sendStdInput, name="inputTh", args=())
     inputTh.start()
 
     #exit入れるまで続ける
     while(flag):
+        #ソケットを監視
+        rready, wready, xready = select.select(readfds, [], [])
         #受信が来たとき
         for ready in rready:
             recv = ""
-            len = ready.recv(bufsize)
-            recv += len
-            if len == 0:
-                print (recv.decode())
+            while(True):
+                len = ready.recv(bufsize)
+                recv += len
+                if len != bufsize :
+                    break
+            print (recv.decode())
 
 def sendStdInput():
     
