@@ -7,7 +7,7 @@ socket_set_nonblock($sockets);
 socket_bind($s, '0.0.0.0', port);
 socket_listen($s, 5);
 while(true){
-    $socket = socket_accept();
+    $socket = socket_accept($s);
     if($socket == false){
 
     }
