@@ -1,9 +1,13 @@
 import socket
 import threading
 import os
+from multiprocessing import Queue
 
+# 子プロセスに送信する文字列を渡すのに使用
+rpipe, wpipe = Pipe()
+# 子プロセスが受信したものを集約するのに使用
+q = multiprocessing.Queue()
 pid = 0
-rpipe, wpipe = os.pipe()
 
 class TcpChatServer:
     self.process_lists = []
@@ -24,20 +28,20 @@ class TcpChatServer:
                 print("connect from:" + addr)
                 global pid
                 pid = os.fork()
-                #子プロセスなら終了
+                # 子プロセスなら終了
                 if pid == 0:
-                    #子プロセスに基本ソケットは不要
+                    # 子プロセスに基本ソケットは不要
                     await_socket.close()
                     break
-                #forkerror
+                # forkerror
                 elif pid == -1:
                     exit(1)
-                #親プロセスに子ソケットも不要
+                # 親プロセスに子ソケットも不要
                 else:
                     self.process_lists.append(pid)
                     conn.close()
             except KeyboardInterrupt:
-                exit()
+                exit(0)
 
     def recv_chat(self):
         pass
@@ -47,6 +51,8 @@ class TcpChatServer:
 
 
 if __name__ == "__main__":
-    tcpchatserver = TcpChatServer()
-    #acceptをメイン、sendとrecvを子プロセスで管理
-    #pipeか共有メモリを使うか、一つ作成するかプロセス毎に作成するか
+    server = TcpChatServer()
+    server.forksock()
+
+    # acceptをメイン、sendとrecvを子プロセスで管理
+    # pipeか共有メモリを使うか、一つ作成するかプロセス毎に作成するか
