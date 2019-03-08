@@ -1,12 +1,13 @@
 import socket
 import threading
 import os
-from multiprocessing import Queue
+import multiprocessing
 
 # 子プロセスに送信する文字列を渡すのに使用
 rpipe, wpipe = Pipe()
 # 子プロセスが受信したものを集約するのに使用
 q = multiprocessing.Queue()
+
 pid = 0
 
 class TcpChatServer:
@@ -17,7 +18,7 @@ class TcpChatServer:
     def __init__(self):
         pass
 
-    def forksock(self):
+    def fork_sock(self):
         await_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         await_socket.bind(("0.0.0.0", port))
         await_socket.listen(5)
@@ -43,7 +44,7 @@ class TcpChatServer:
             except KeyboardInterrupt:
                 exit(0)
 
-    def recv_chat(self):
+    def receive_message(self):
         pass
 
     def send_message(self):
