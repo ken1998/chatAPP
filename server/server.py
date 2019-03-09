@@ -1,32 +1,101 @@
 import socket
 import threading
 import os
-import multiprocessing
-
-# 子プロセスに送信する文字列を渡すのに使用
-rpipe, wpipe = Pipe()
-# 子プロセスが受信したものを集約するのに使用
-q = multiprocessing.Queue()
-
+import array
+import multiprocessing as mp
+"""
+こんなものなかった:
+    子プロセスに送信する文字列を渡すのに使用
+    rpipe, wpipe = Pipe()
+    子プロセスが受信したものを集約するのに使用
+"""
 pid = 0
 
-class TcpChatServer:
-    self.process_lists = []
-    self.ipaddr = "172.0.0.1"
-    self.port = 65000
 
-    def __init__(self):
-        pass
+class ShareMemory:
+    latest = mp.Value('d', 0)  # 共有変数　0から149まで　最新配列の添字を格納
+    where_loaded = array.Value('d', 0)  # ローカル　clientに送った配列の添字を保持
+    str1 = []
+    str2 = []
+    str3 = []
+    for i in range(50):
+        str1[i] = mp.Array('B')
+        str2[i] = mp.Array('B')
+        str3[i] = mp.Array('B')
+    share_str = [str1, str2, str3]
+    # share_str->str[1~3]->array[0~49]->char(list構造)　で取り出す
+
+    """
+    get_array:引数(int) 返り値 mp.Array
+    引数に応じたarrayをshare_strから呼び出し返却する
+    """
+    def get_array(self, number: int):
+        # ちゃんと例外にしたい
+        if number <= 150:
+            print("範囲外参照")
+            exit(1)
+        str_list = self.share_str[number / 50]
+        str_array = str_list[number % 50]
+        return str_array
+
+    """
+    store:引数(byte) 返値 none
+    入力されたbyteをlatestに記されたarrayにunsigned charに変換、格納する
+    すでに入力されていた場合は一度空にする
+    """
+    def store(self, utf16_string: bytes):
+        with self.latest.get_lock():
+            self.latest += 1
+            target = self.get_array(self.latest)
+#        if len(target) != 0:
+        with target.get_lock():
+            target.clear()
+            target.frombytes(utf16_string)
+
+    """
+    load:引数(int) 返値 bytes
+    入力されたintが示すarrayに格納されたcharをbytesに結合し返却する
+    """
+    def load(self, number: int):
+        target = self.get_array(number)
+        join = B''
+        for char in target:
+            join += char.to_bytes(1, 'big')
+        return join
+
+    def load_until_latest(self):
+        return_list = []
+        # latestをwhere_loadedが1超えたら終了
+        while self.latest != self.where_loaded - 1:
+            return_list.append(self.load(self.where_loaded + 1))
+            self.where_loaded += 1
+            if self.where_loaded <= 150:
+                self.where_loaded == 0
+            # 一回余分にインクリメントしてるので引く
+            self.where_loaded -= 1
+        return return_list
+
+
+class TcpChatServer:
+    process_lists = []
+    ipaddr = "172.0.0.1"
+    port = 65000
+    sm: ShareMemory
+
+    def __init__(self,share_memory: ShareMemory):
+        self.sm = share_memory
 
     def fork_sock(self):
         await_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        await_socket.bind(("0.0.0.0", port))
+        await_socket.bind(("0.0.0.0", self.port))
         await_socket.listen(5)
         while True:
             try:
                 # 接続要求を受信
                 conn, addr = await_socket.accept()
                 print("connect from:" + addr)
+                #ロード同期を最新からに設定
+                self.sm.where_loaded = self.sm.latest
                 global pid
                 pid = os.fork()
                 # 子プロセスなら終了
@@ -52,7 +121,8 @@ class TcpChatServer:
 
 
 if __name__ == "__main__":
-    server = TcpChatServer()
+    sm = ShareMemory()
+    server = TcpChatServer(sm)
     server.forksock()
 
     # acceptをメイン、sendとrecvを子プロセスで管理
