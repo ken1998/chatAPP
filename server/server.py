@@ -18,11 +18,14 @@ class ShareMemory:
     str1 = []
     str2 = []
     str3 = []
-    for i in range(50):
-        str1[i] = mp.Array('B')
-        str2[i] = mp.Array('B')
-        str3[i] = mp.Array('B')
-    share_str = [str1, str2, str3]
+    share_str =[]
+
+    def __init__(self):
+        for i in range(50):
+            self.str1[i] = mp.Array('u', 0)
+            self.str2[i] = mp.Array('u', 0)
+            self.str3[i] = mp.Array('u', 0)
+            self.share_str = [self.str1, self.str2, self.str3]
     # share_str->str[1~3]->array[0~49]->char(list構造)　で取り出す
 
     """
@@ -46,11 +49,16 @@ class ShareMemory:
     def store(self, utf16_string: bytes):
         with self.latest.get_lock():
             self.latest += 1
+            if self.latest <= 150:
+                self.latest == 0
             target = self.get_array(self.latest)
 #        if len(target) != 0:
         with target.get_lock():
-            target.clear()
-            target.frombytes(utf16_string)
+            temp = array.Array('u')
+            temp.frombytes(utf16_string)
+            # clearがmp.arrayになかったのでゆっくり考えます
+#            target.clear()
+            target += temp
 
     """
     load:引数(int) 返値 bytes
@@ -59,10 +67,17 @@ class ShareMemory:
     def load(self, number: int):
         target = self.get_array(number)
         join = B''
-        for char in target:
+        join += target
+        """for char in target:
             join += char.to_bytes(1, 'big')
+            """
         return join
 
+        """
+        load_until_latest:引数 none 返り値 list[bytes]
+        where_loadとlatestを比較し、latestまでを返す
+        where_load == latest
+        """
     def load_until_latest(self):
         return_list = []
         # latestをwhere_loadedが1超えたら終了
@@ -82,7 +97,7 @@ class TcpChatServer:
     port = 65000
     sm: ShareMemory
 
-    def __init__(self,share_memory: ShareMemory):
+    def __init__(self, share_memory: ShareMemory):
         self.sm = share_memory
 
     def fork_sock(self):
