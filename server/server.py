@@ -95,6 +95,8 @@ class TcpChatServer:
     process_lists = []
     ipaddr = "172.0.0.1"
     port = 65000
+    bufsize = 4096
+    conn: socket
     sm: ShareMemory
 
     def __init__(self, share_memory: ShareMemory):
@@ -107,7 +109,7 @@ class TcpChatServer:
         while True:
             try:
                 # 接続要求を受信
-                conn, addr = await_socket.accept()
+                self.conn, addr = await_socket.accept()
                 print("connect from:" + addr)
                 #ロード同期を最新からに設定
                 self.sm.where_loaded = self.sm.latest
@@ -124,15 +126,24 @@ class TcpChatServer:
                 # 親プロセスに子ソケットも不要
                 else:
                     self.process_lists.append(pid)
-                    conn.close()
+                    self.conn.close()
             except KeyboardInterrupt:
                 exit(0)
 
+    """
+    recive_message:引数 none 返り値 bytes
+    クライアントからの受信をbyte型のまま返却する
+    """
     def receive_message(self):
-        pass
+        response: bytes
+        while True:
+            receive = self.conn.recv(self.bufsize)
+            response += receive
+            if len(receive) != self.bufsize:
+                return response
 
-    def send_message(self):
-        pass
+    def send_message(self, message: bytes):
+        self.conn.send(message)
 
 
 if __name__ == "__main__":
