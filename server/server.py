@@ -14,17 +14,17 @@ pid = 0
 
 class ShareMemory:
     latest = mp.Value('d', 0)  # 共有変数　0から149まで　最新配列の添字を格納
-    where_loaded = array.Value('d', 0)  # ローカル　clientに送った配列の添字を保持
+    where_loaded = 0  # ローカル　clientに送った配列の添字を保持
     str1 = []
     str2 = []
     str3 = []
-    share_str =[]
+    share_str = []
 
     def __init__(self):
         for i in range(50):
-            self.str1[i] = mp.Array('u', 0)
-            self.str2[i] = mp.Array('u', 0)
-            self.str3[i] = mp.Array('u', 0)
+            self.str1.append(mp.Array('u', 0))
+            self.str2.append(mp.Array('u', 0))
+            self.str3.append(mp.Array('u', 0))
             self.share_str = [self.str1, self.str2, self.str3]
     # share_str->str[1~3]->array[0~49]->char(list構造)　で取り出す
 
@@ -138,7 +138,16 @@ class TcpChatServer:
 if __name__ == "__main__":
     sm = ShareMemory()
     server = TcpChatServer(sm)
-    server.forksock()
+    server.fork_sock()
+    recv_thread = threading.Thread(target=server.receive_message())
+    recv_thread.start()
+    while True:
+        if sm.latest == sm.where_loaded:
+            loads = sm.load_until_latest()
+            for load in loads:
+                server.send_message(load)
+
+
 
     # acceptをメイン、sendとrecvを子プロセスで管理
     # pipeか共有メモリを使うか、一つ作成するかプロセス毎に作成するか

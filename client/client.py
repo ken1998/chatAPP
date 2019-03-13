@@ -1,16 +1,24 @@
 import socket
 import select
-import threading #標準入力はthreadでとりあえず
+import threading  # 標準入力はthreadでとりあえず
 
-ipaddr = "172.0.0.1"
+ipaddr = "192.168.1.7"
 port = 65000
 bufsize = 4096
-flag = True #終了する場合false
+flag = True  # 終了する場合false
+
+
+def send_std_input():
+    input_str = input()
+    if input_str == "exit":
+        exit()
+    else:
+        s.send(input_str)
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
-    #接続
+    # 接続
     s.connect((ipaddr, port))
     print("connected!!")
     #監視対象ソケットに追加(clientなので一つ)
@@ -32,9 +40,5 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     break
         print(recv.decode())
 
-def send_std_input():
-    input_str = input()
-    if input_str == "exit":
-        exit()
-    else:
-        s.send(input_str)
+
+
