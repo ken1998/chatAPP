@@ -8,11 +8,12 @@ str = 'ほげええええええ'
 print(str)
 baito: bytes = str.encode('utf-16le')
 print(baito)
-
+import pdb; pdb.set_trace()
 # bytes to int[]
 testarray = array.array('u')
 testarray.frombytes(baito)
 with hoge.get_lock():
+    # ポインタ書き換えるクソ雑魚おる？
     hoge = testarray
     print(hoge)
 
@@ -27,7 +28,7 @@ for char in hoge:
 temp += hoge
 
 strings = hoge
-strings = strings.decode('utf-16le')
+#strings = strings.decode('utf-16le')
 print (strings)
 print(hoge)
 print(temp.decode('utf-16le'))

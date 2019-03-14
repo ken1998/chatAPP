@@ -34,11 +34,11 @@ class ShareMemory:
     """
     def get_array(self, number: int):
         # ちゃんと例外にしたい
-        if number <= 150:
+        if number >= 150:
             print("範囲外参照")
             exit(1)
-        str_list = self.share_str[number / 50]
-        str_array = str_list[number % 50]
+        str_list = self.share_str[int(number / 50)]
+        str_array = str_list[int(number % 50)]
         return str_array
 
     """
@@ -48,15 +48,16 @@ class ShareMemory:
     """
     def store(self, utf16_string: bytes):
         with self.latest.get_lock():
-            self.latest += 1
-            if self.latest <= 150:
-                self.latest == 0
-            target = self.get_array(self.latest)
+            self.latest.value += 1
+            if self.latest.value <= 150:
+                self.latest.value == 0
+            target = self.get_array(self.latest.value)
 #        if len(target) != 0:
         with target.get_lock():
             temp = array.Array('u')
             temp.frombytes(utf16_string)
             # clearがmp.arrayになかったのでゆっくり考えます
+            # delしてarrayをlistに確保し直す可能性
 #            target.clear()
             target += temp
 
@@ -67,10 +68,8 @@ class ShareMemory:
     def load(self, number: int):
         target = self.get_array(number)
         join = B''
-        join += target
-        """for char in target:
+        for char in target:
             join += char.to_bytes(1, 'big')
-            """
         return join
 
         """
@@ -81,7 +80,7 @@ class ShareMemory:
     def load_until_latest(self):
         return_list = []
         # latestをwhere_loadedが1超えたら終了
-        while self.latest != self.where_loaded - 1:
+        while self.latest.value != self.where_loaded - 1:
             return_list.append(self.load(self.where_loaded + 1))
             self.where_loaded += 1
             if self.where_loaded <= 150:
@@ -115,7 +114,7 @@ class TcpChatServer:
                     print(ipaddress, end="")
                 print()
                 # ロード同期を最新からに設定
-                self.sm.where_loaded = self.sm.latest
+                self.sm.where_loaded = self.sm.latest.value
                 global pid
                 pid = os.fork()
                 # 子プロセスなら終了
@@ -138,7 +137,7 @@ class TcpChatServer:
     クライアントからの受信をbyte型のまま返却する
     """
     def receive_message(self):
-        response: bytes
+        response = B''
         while True:
             receive = self.conn.recv(self.bufsize)
             response += receive
@@ -153,10 +152,12 @@ if __name__ == "__main__":
     sm = ShareMemory()
     server = TcpChatServer(sm)
     server.fork_sock()
+#    import pdb
+#    pdb.set_trace()
     recv_thread = threading.Thread(target=server.receive_message())
     recv_thread.start()
     while True:
-        if sm.latest == sm.where_loaded:
+        if sm.latest.value == sm.where_loaded:
             loads = sm.load_until_latest()
             for load in loads:
                 server.send_message(load)

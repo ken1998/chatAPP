@@ -2,7 +2,7 @@ import socket
 import select
 import threading  # 標準入力はthreadでとりあえず
 
-ipaddr = "192.168.126.134"
+ipaddr = "192.168.1.7"
 port = 65000
 bufsize = 4096
 flag = True  # 終了する場合false
@@ -12,6 +12,7 @@ def send_std_input():
     input_str = input()
     print(input_str)
     if input_str == "exit":
+        flag = False
         exit()
     else:
         s.send(input_str.encode('utf-16'))
@@ -37,9 +38,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             while True:
                 len = ready.recv(bufsize)
                 recv += len
-                if len != bufsize:
+                if len == 0:
+                    print(recv.decode())
                     break
-        print(recv.decode())
+
 
 
 
