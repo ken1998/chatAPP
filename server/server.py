@@ -110,8 +110,11 @@ class TcpChatServer:
             try:
                 # 接続要求を受信
                 self.conn, addr = await_socket.accept()
-                print("connect from:" + addr)
-                #ロード同期を最新からに設定
+                print("connect from:", end="")
+                for ipaddress in addr:
+                    print(ipaddress, end="")
+                print()
+                # ロード同期を最新からに設定
                 self.sm.where_loaded = self.sm.latest
                 global pid
                 pid = os.fork()
