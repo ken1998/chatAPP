@@ -2,7 +2,7 @@ import socket
 import select
 import threading  # 標準入力はthreadでとりあえず
 
-ipaddr = "192.168.1.7"
+ipaddr = "192.168.126.134"
 port = 65000
 bufsize = 4096
 flag = True  # 終了する場合false

@@ -109,10 +109,7 @@ class TcpChatServer:
             try:
                 # 接続要求を受信
                 self.conn, addr = await_socket.accept()
-                print("connect from:", end="")
-                for ipaddress in addr:
-                    print(ipaddress, end="")
-                print()
+                print("connect from:" + addr)
                 # ロード同期を最新からに設定
                 self.sm.where_loaded = self.sm.latest.value
                 global pid
@@ -134,15 +131,18 @@ class TcpChatServer:
 
     """
     recive_message:引数 none 返り値 bytes
-    クライアントからの受信をbyte型のまま返却する
+    クライアントからの受信を格納する
     """
     def receive_message(self):
-        response = B''
         while True:
-            receive = self.conn.recv(self.bufsize)
-            response += receive
-            if len(receive) != self.bufsize:
-                return response
+            char = B''
+            while True:
+                receive = self.conn.recv(self.bufsize)
+                char += receive
+                if len(receive) != self.bufsize:
+                    sm.store(char)
+                    break
+
 
     def send_message(self, message: bytes):
         self.conn.send(message)
