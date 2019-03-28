@@ -109,7 +109,7 @@ class TcpChatServer:
             try:
                 # 接続要求を受信
                 self.conn, addr = await_socket.accept()
-                print("connect from:" + addr)
+                print("connect from:" + addr[0])
                 # ロード同期を最新からに設定
                 self.sm.where_loaded = self.sm.latest.value
                 global pid
