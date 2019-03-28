@@ -54,7 +54,7 @@ class ShareMemory:
             target = self.get_array(self.latest.value)
 #        if len(target) != 0:
         with target.get_lock():
-            temp = array.Array('u')
+            temp = array.array('d')
             temp.frombytes(utf16_string)
             # clearがmp.arrayになかったのでゆっくり考えます
             # delしてarrayをlistに確保し直す可能性
@@ -92,7 +92,7 @@ class ShareMemory:
 
 class TcpChatServer:
     process_lists = []
-    ipaddr = "172.0.0.1"
+    ipaddr = socket.gethostbyname(socket.gethostname())
     port = 65000
     bufsize = 4096
     conn: socket
