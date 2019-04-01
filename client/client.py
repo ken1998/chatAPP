@@ -1,8 +1,8 @@
-import socket
+﻿import socket
 import select
 import threading  # 標準入力はthreadでとりあえず
 
-ipaddr = "192.168.126.134"
+ipaddr = socket.gethostbyname(socket.gethostname())
 port = 65000
 bufsize = 4096
 flag = True  # 終了する場合false
@@ -20,6 +20,8 @@ def send_std_input():
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
+    ipaddr = input("connect ipaddr:")
+    
     # 接続
     s.connect((ipaddr, port))
     print("connected!!")
@@ -31,7 +33,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # exit入れるまで続ける
     while flag:
         # ソケットを監視
-        rready, wready, xready = select.select(readfds, [], [])
+        rready, wready, xready = select.select(readfds, [], [], 0)
         # 受信が来たとき
         for ready in rready:
             recv = B""

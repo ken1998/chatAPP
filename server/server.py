@@ -1,8 +1,9 @@
-import socket
+﻿import socket
 import threading
 import os
 import array
 import multiprocessing as mp
+import pdb
 """
 こんなものなかった:
     子プロセスに送信する文字列を渡すのに使用
@@ -13,7 +14,7 @@ pid = 0
 
 
 class ShareMemory:
-    latest = mp.Value('d', 0)  # 共有変数　0から149まで　最新配列の添字を格納
+    latest = mp.Value('I', 0)  # 共有変数　0から149まで　最新配列の添字を格納
     where_loaded = 0  # ローカル　clientに送った配列の添字を保持
     str1 = []
     str2 = []
@@ -22,9 +23,9 @@ class ShareMemory:
 
     def __init__(self):
         for i in range(50):
-            self.str1.append(mp.Array('u', 0))
-            self.str2.append(mp.Array('u', 0))
-            self.str3.append(mp.Array('u', 0))
+            self.str1.append(mp.Array('B', range(300)))
+            self.str2.append(mp.Array('B', 0))
+            self.str3.append(mp.Array('B', 0))
             self.share_str = [self.str1, self.str2, self.str3]
     # share_str->str[1~3]->array[0~49]->char(list構造)　で取り出す
 
@@ -54,12 +55,15 @@ class ShareMemory:
             target = self.get_array(self.latest.value)
 #        if len(target) != 0:
         with target.get_lock():
-            temp = array.array('d')
+            temp = array.array('B')
             temp.frombytes(utf16_string)
             # clearがmp.arrayになかったのでゆっくり考えます
             # delしてarrayをlistに確保し直す可能性
 #            target.clear()
-            target += temp
+            i = 0
+            for hoge in temp:
+                target[i] = hoge
+                i += 1
 
     """
     load:引数(int) 返値 bytes
@@ -72,11 +76,11 @@ class ShareMemory:
             join += char.to_bytes(1, 'big')
         return join
 
-        """
-        load_until_latest:引数 none 返り値 list[bytes]
-        where_loadとlatestを比較し、latestまでを返す
-        where_load == latest
-        """
+    """
+    load_until_latest:引数 none 返り値 list[bytes]
+    where_loadとlatestを比較し、latestまでを返す
+    where_load == latest
+    """
     def load_until_latest(self):
         return_list = []
         # latestをwhere_loadedが1超えたら終了
@@ -103,6 +107,7 @@ class TcpChatServer:
 
     def fork_sock(self):
         await_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print("this server IP is " + self.ipaddr)
         await_socket.bind(("0.0.0.0", self.port))
         await_socket.listen(5)
         while True:
@@ -134,14 +139,16 @@ class TcpChatServer:
     クライアントからの受信を格納する
     """
     def receive_message(self):
+        pdb.set_trace()
         while True:
             char = B''
             while True:
-                receive = self.conn.recv(self.bufsize)
-                char += receive
-                if len(receive) != self.bufsize:
-                    sm.store(char)
-                    break
+                receive = self.conn.recv(1024)
+#                char += receive
+#                if len(receive) == 0:
+                sm.store(receive)
+                break
+                
 
 
     def send_message(self, message: bytes):
@@ -152,7 +159,6 @@ if __name__ == "__main__":
     sm = ShareMemory()
     server = TcpChatServer(sm)
     server.fork_sock()
-#    import pdb
 #    pdb.set_trace()
     recv_thread = threading.Thread(target=server.receive_message())
     recv_thread.start()
