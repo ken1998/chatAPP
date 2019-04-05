@@ -37,7 +37,7 @@ class ShareMemory:
         # ちゃんと例外にしたい
         if number >= 150:
             print("範囲外参照")
-            exit(1)
+            print(number)
         str_list = self.share_str[int(number / 50)]
         str_array = str_list[int(number % 50)]
         return str_array
@@ -50,7 +50,7 @@ class ShareMemory:
     def store(self, utf16_string: bytes):
         with self.latest.get_lock():
             self.latest.value += 1
-            if self.latest.value <= 150:
+            if self.latest.value >= 150:
                 self.latest.value == 0
             target = self.get_array(self.latest.value)
 #        if len(target) != 0:
@@ -87,7 +87,7 @@ class ShareMemory:
         while self.latest.value != self.where_loaded - 1:
             return_list.append(self.load(self.where_loaded + 1))
             self.where_loaded += 1
-            if self.where_loaded <= 150:
+            if self.where_loaded >= 150:
                 self.where_loaded == 0
             # 一回余分にインクリメントしてるので引く
             self.where_loaded -= 1
@@ -110,7 +110,8 @@ class TcpChatServer:
         print("this server IP is " + self.ipaddr)
         await_socket.bind(("0.0.0.0", self.port))
         await_socket.listen(5)
-        while True:
+        pflag = True
+        while pflag:
             try:
                 # 接続要求を受信
                 self.conn, addr = await_socket.accept()
@@ -119,11 +120,13 @@ class TcpChatServer:
                 self.sm.where_loaded = self.sm.latest.value
                 global pid
                 pid = os.fork()
+                print("forking")
                 # 子プロセスなら終了
                 if pid == 0:
                     # 子プロセスに基本ソケットは不要
                     await_socket.close()
-                    break
+                    print("clone value number:" + str(self.sm.latest.value))
+                    pflag = False
                 # forkerror
                 elif pid == -1:
                     exit(1)
@@ -139,14 +142,15 @@ class TcpChatServer:
     クライアントからの受信を格納する
     """
     def receive_message(self):
-        pdb.set_trace()
+        #pdb.set_trace()
         while True:
             char = B''
             while True:
-                receive = self.conn.recv(1024)
+                receive = self.conn.recv(4096)
 #                char += receive
 #                if len(receive) == 0:
                 sm.store(receive)
+                print(receive.decode('utf-16'))
                 break
                 
 
@@ -159,13 +163,18 @@ if __name__ == "__main__":
     sm = ShareMemory()
     server = TcpChatServer(sm)
     server.fork_sock()
-#    pdb.set_trace()
+    print("forked")
+    #threadがロックしている・・・？
     recv_thread = threading.Thread(target=server.receive_message())
+    print("made thread")
     recv_thread.start()
+    print("thread_start")
+    #pdb.set_trace()
     while True:
         if sm.latest.value == sm.where_loaded:
             loads = sm.load_until_latest()
             for load in loads:
+                print(load.decode('utf-16'))
                 server.send_message(load)
 
 

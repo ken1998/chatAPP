@@ -9,13 +9,13 @@ flag = True  # 終了する場合false
 
 
 def send_std_input():
-    input_str = input()
-    print(input_str)
-    if input_str == "exit":
-        flag = False
-        exit()
-    else:
-        s.send(input_str.encode('utf-16'))
+    while True:
+        input_str = input()
+        if input_str == "exit":
+            flag = False
+            exit()
+        else:
+            s.send(input_str.encode('utf-16'))
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
