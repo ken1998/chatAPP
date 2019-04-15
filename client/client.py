@@ -13,6 +13,9 @@ def send_std_input():
         input_str = input()
         if input_str == "exit":
             flag = False
+            s.send("sessionExit".encode('utf-16'))
+            s.close()
+            print("socket closed")
             exit()
         else:
             s.send(input_str.encode('utf-16'))

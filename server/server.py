@@ -60,9 +60,13 @@ class ShareMemory:
             # clearがmp.arrayになかったのでゆっくり考えます
             # delしてarrayをlistに確保し直す可能性
 #            target.clear()
+            store_debug = B""
+            for hoge in temp:
+                store_debug += hoge.to_bytes(1, 'big')
+            print("store:" + store_debug.decode('utf-16'))
             i = 0
             for hoge in temp:
-                target[i] = hoge
+                target[i] += hoge
                 i += 1
 
     """
@@ -74,6 +78,7 @@ class ShareMemory:
         join = B''
         for char in target:
             join += char.to_bytes(1, 'big')
+        print("loaded:" + join.decode('utf-16'))
         return join
 
     """
@@ -83,14 +88,14 @@ class ShareMemory:
     """
     def load_until_latest(self):
         return_list = []
-        # latestをwhere_loadedが1超えたら終了
-        while self.latest.value != self.where_loaded - 1:
+        # 最新まで読み込んだら終了する
+        while self.latest.value != self.where_loaded:
             return_list.append(self.load(self.where_loaded + 1))
             self.where_loaded += 1
             if self.where_loaded >= 150:
-                self.where_loaded == 0
+                self.where_loaded = 0
             # 一回余分にインクリメントしてるので引く
-            self.where_loaded -= 1
+            # self.where_loaded -= 1
         return return_list
 
 
@@ -132,6 +137,7 @@ class TcpChatServer:
                     exit(1)
                 # 親プロセスに子ソケットも不要
                 else:
+                    print("host process")
                     self.process_lists.append(pid)
                     self.conn.close()
             except KeyboardInterrupt:
@@ -142,18 +148,19 @@ class TcpChatServer:
     クライアントからの受信を格納する
     """
     def receive_message(self):
-        #pdb.set_trace()
+        # pdb.set_trace()
         while True:
             char = B''
             while True:
                 receive = self.conn.recv(4096)
 #                char += receive
 #                if len(receive) == 0:
+                if receive.decode('utf-16') == "sessionExit":
+                    self.conn.close()
+                    exit()
                 sm.store(receive)
-                print(receive.decode('utf-16'))
+                print("received:" + receive.decode('utf-16'))
                 break
-                
-
 
     def send_message(self, message: bytes):
         self.conn.send(message)
@@ -162,20 +169,27 @@ class TcpChatServer:
 if __name__ == "__main__":
     sm = ShareMemory()
     server = TcpChatServer(sm)
+    # 親プロセスはfork_sockで着信を待ち続ける
     server.fork_sock()
+    # ここから子プロセス
     print("forked")
-    #threadがロックしている・・・？
-    recv_thread = threading.Thread(target=server.receive_message())
+    # threadがロックしている・・・？
+    recv_thread = threading.Thread(target=server.receive_message)
     print("made thread")
     recv_thread.start()
     print("thread_start")
-    #pdb.set_trace()
+    # pdb.set_trace()
     while True:
-        if sm.latest.value == sm.where_loaded:
+        if sm.latest.value != sm.where_loaded:
+            print("main process:sending")
             loads = sm.load_until_latest()
+            print(loads)
+            print("main process:loaded")
             for load in loads:
-                print(load.decode('utf-16'))
-                server.send_message(load)
+                print(load)
+
+            print(load.decode('utf-16'))
+            server.send_message(load)
 
 
 
