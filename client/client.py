@@ -18,6 +18,7 @@ def send_std_input():
             print("socket closed")
             exit()
         else:
+            input_str += '\u0000'
             s.send(input_str.encode('utf-16'))
 
 

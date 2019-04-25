@@ -23,9 +23,9 @@ class ShareMemory:
 
     def __init__(self):
         for i in range(50):
-            self.str1.append(mp.Array('B', range(300)))
-            self.str2.append(mp.Array('B', 0))
-            self.str3.append(mp.Array('B', 0))
+            self.str1.append(mp.Array('B', 150))
+            self.str2.append(mp.Array('B', 150))
+            self.str3.append(mp.Array('B', 150))
             self.share_str = [self.str1, self.str2, self.str3]
     # share_str->str[1~3]->array[0~49]->char(list構造)　で取り出す
 
@@ -54,20 +54,22 @@ class ShareMemory:
                 self.latest.value == 0
             target = self.get_array(self.latest.value)
 #        if len(target) != 0:
-        with target.get_lock():
-            temp = array.array('B')
-            temp.frombytes(utf16_string)
-            # clearがmp.arrayになかったのでゆっくり考えます
-            # delしてarrayをlistに確保し直す可能性
-#            target.clear()
-            store_debug = B""
-            for hoge in temp:
-                store_debug += hoge.to_bytes(1, 'big')
-            print("store:" + store_debug.decode('utf-16'))
-            i = 0
-            for hoge in temp:
-                target[i] += hoge
-                i += 1
+            with target.get_lock():
+                temp = array.array('B')
+                temp.frombytes(utf16_string)
+                # clearがmp.arrayになかったのでゆっくり考えます
+                # delしてarrayをlistに確保し直す可能性
+    #            target.clear()
+                store_debug = B""
+                for hoge in temp:
+                    store_debug += hoge.to_bytes(1, 'big')
+                print("store:" + store_debug.decode('utf-16'))
+                print("store_byte:" + str(store_debug))
+                i = 0
+                for hoge in temp:
+                    print("now_store:" + str(hoge))
+                    target[i] += hoge
+                    i += 1
 
     """
     load:引数(int) 返値 bytes
@@ -76,9 +78,28 @@ class ShareMemory:
     def load(self, number: int):
         target = self.get_array(number)
         join = B''
-        for char in target:
-            join += char.to_bytes(1, 'big')
-        print("loaded:" + join.decode('utf-16'))
+        chars = B''
+        is_2byte = False  # 今のループが2バイト目か
+        byte_num = 0
+        print("load_char:")
+        loop = True
+        while loop:
+            # 進捗　targetの指定の仕方があやしい
+            # 読みだしたものを全部取得する
+            chars += target[0].to_bytes(1, 'big')
+            # 2バイト文だけ保持する（1文字分）
+            join += target[1].to_bytes(1, 'big')
+            if is_2byte:
+                # ヌル文字で終了
+                if chars == "\n".encode('utf-16'):
+                    loop = False
+                is_2byte = False
+                chars = B""
+            else:
+                is_2byte = True
+            byte_num += 1
+
+        print("\nloaded:" + join.decode('utf-16'))
         return join
 
     """
@@ -130,7 +151,7 @@ class TcpChatServer:
                 if pid == 0:
                     # 子プロセスに基本ソケットは不要
                     await_socket.close()
-                    print("clone value number:" + str(self.sm.latest.value))
+                    print("clone number:" + str(self.sm.latest.value))
                     pflag = False
                 # forkerror
                 elif pid == -1:
@@ -173,7 +194,7 @@ if __name__ == "__main__":
     server.fork_sock()
     # ここから子プロセス
     print("forked")
-    # threadがロックしている・・・？
+    # 受信を別スレッドで行う
     recv_thread = threading.Thread(target=server.receive_message)
     print("made thread")
     recv_thread.start()
