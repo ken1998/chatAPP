@@ -91,7 +91,7 @@ class ShareMemory:
             join += target[1].to_bytes(1, 'big')
             if is_2byte:
                 # ヌル文字で終了
-                if chars == "\n".encode('utf-16'):
+                if chars == "\n".encode('utf-16le'):
                     loop = False
                 is_2byte = False
                 chars = B""
@@ -176,6 +176,7 @@ class TcpChatServer:
                 receive = self.conn.recv(4096)
 #                char += receive
 #                if len(receive) == 0:
+                # 終了命令がきたらこのプロセスを終了する
                 if receive.decode('utf-16') == "sessionExit":
                     self.conn.close()
                     exit()
