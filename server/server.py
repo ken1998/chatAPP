@@ -63,13 +63,14 @@ class ShareMemory:
                 store_debug = B""
                 for hoge in temp:
                     store_debug += hoge.to_bytes(1, 'big')
-                print("store:" + store_debug.decode('utf-16'))
+               # print("store:" + store_debug.decode('utf-16'))
                 print("store_byte:" + str(store_debug))
                 i = 0
                 for hoge in temp:
                     print("now_store:" + str(hoge))
                     target[i] += hoge
                     i += 1
+                
 
     """
     load:引数(int) 返値 bytes
@@ -81,14 +82,14 @@ class ShareMemory:
         chars = B''
         is_2byte = False  # 今のループが2バイト目か
         byte_num = 0
-        print("load_char:")
         loop = True
+        # pdb.set_trace()
         while loop:
             # 進捗　targetの指定の仕方があやしい
             # 読みだしたものを全部取得する
-            chars += target[0].to_bytes(1, 'big')
-            # 2バイト文だけ保持する（1文字分）
-            join += target[1].to_bytes(1, 'big')
+            chars += target[byte_num].to_bytes(1, 'big')
+            # 2バイト分だけ保持する（1文字分）
+            join += target[byte_num].to_bytes(1, 'big')
             if is_2byte:
                 # ヌル文字で終了
                 if chars == "\n".encode('utf-16le'):
@@ -99,7 +100,7 @@ class ShareMemory:
                 is_2byte = True
             byte_num += 1
 
-        print("\nloaded:" + join.decode('utf-16'))
+        print("loaded:" + join.decode('utf-16'))
         return join
 
     """
@@ -200,7 +201,6 @@ if __name__ == "__main__":
     print("made thread")
     recv_thread.start()
     print("thread_start")
-    # pdb.set_trace()
     while True:
         if sm.latest.value != sm.where_loaded:
             print("main process:sending")

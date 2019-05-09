@@ -1,6 +1,7 @@
 ﻿import socket
 import select
 import threading  # 標準入力はthreadでとりあえず
+import pdb
 
 ipaddr = socket.gethostbyname(socket.gethostname())
 port = 65000
@@ -18,7 +19,7 @@ def send_std_input():
             print("socket closed")
             exit()
         else:
-            input_str += '\u0000'
+            input_str += "\n"
             s.send(input_str.encode('utf-16'))
 
 
@@ -29,23 +30,26 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # 接続
     s.connect((ipaddr, port))
     print("connected!!")
+    # pdb.set_trace()
     # 監視対象ソケットに追加(clientなので一つ)
-    readfds = (s, )
-    inputTh = threading.Thread(target=send_std_input())
+    # readfds = (s, )
+    inputTh = threading.Thread(target=send_std_input)
     inputTh.start()
-
+    print("メインスレッドだよ！")
+    # pdb.set_trace()
     # exit入れるまで続ける
     while flag:
         # ソケットを監視
-        rready, wready, xready = select.select(readfds, [], [], 0)
-        # 受信が来たとき
-        for ready in rready:
-            recv = B""
+        # rready, wready, xready = select.select(readfds, [], [], 0)
+        # # 受信が来たとき
+        # for ready in rready:
+        while True:
+            chars = B""
             while True:
-                len = ready.recv(bufsize)
-                recv += len
-                if len == 0:
-                    print(recv.decode())
+                recv = s.recv(bufsize)
+                chars += recv
+                if not len(recv) == bufsize :
+                    print(chars.decode('utf-16'))
                     break
 
 
