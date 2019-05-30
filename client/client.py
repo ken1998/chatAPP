@@ -35,13 +35,14 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # exit入れるまで続ける
     while flag:
         # ソケットを監視
-        # rready, wready, xready = select.select(readfds, [], [], 0)
+        can_recv_sock, _, _ = select.select([s,], [], [], 1)
         # # 受信が来たとき
-        # for ready in rready:
-        while True:
+        if flag == False:
+            break
+        for ready in can_recv_sock:
             chars = B""
             while True:
-                recv = s.recv(bufsize)
+                recv = ready.recv(bufsize)
                 chars += recv
                 if not len(recv) == bufsize :
                     print("recv:" + chars.decode('utf-16'))

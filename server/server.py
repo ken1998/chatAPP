@@ -3,7 +3,7 @@ import threading
 import os
 import array
 import multiprocessing as mp
-import pdb
+import time
 """
 こんなものなかった:
     子プロセスに送信する文字列を渡すのに使用
@@ -11,6 +11,7 @@ import pdb
     子プロセスが受信したものを集約するのに使用
 """
 pid = 0
+notEnd = True
 
 
 class ShareMemory:
@@ -83,7 +84,6 @@ class ShareMemory:
         is_2byte = False  # 今のループが2バイト目か
         byte_num = 0
         loop = True
-        # pdb.set_trace()
         while loop:
             # 進捗　targetの指定の仕方があやしい
             # 読みだしたものを全部取得する
@@ -180,6 +180,7 @@ class TcpChatServer:
                 # 終了命令がきたらこのプロセスを終了する
                 if receive.decode('utf-16') == "sessionExit":
                     self.conn.close()
+                    notEnd = False
                     exit()
                 sm.store(receive)
                 print("received:" + receive.decode('utf-16'))
@@ -201,7 +202,7 @@ if __name__ == "__main__":
     print("made thread")
     recv_thread.start()
     print("thread_start")
-    while True:
+    while notEnd:
         if sm.latest.value != sm.where_loaded:
             print("main process:sending")
             loads = sm.load_until_latest()
@@ -209,9 +210,9 @@ if __name__ == "__main__":
             print("main process:loaded")
             for load in loads:
                 print(load)
-
             print(load.decode('utf-16'))
             server.send_message(load)
+        time.sleep(0.05) # cpu使用率 33.4%/1connection 達成記念
 
 
 
