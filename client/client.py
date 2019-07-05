@@ -32,22 +32,23 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # 受信スレッド
     inputTh = threading.Thread(target=send_std_input)
     inputTh.start()
+    try:
     # exit入れるまで続ける
-    while flag:
-        # ソケットを監視
-        can_recv_sock, _, _ = select.select([s,], [], [], 1)
-        # # 受信が来たとき
-        if flag == False:
-            break
-        for ready in can_recv_sock:
-            chars = B""
-            while True:
-                recv = ready.recv(bufsize)
-                chars += recv
-                if not len(recv) == bufsize :
-                    print("recv:" + chars.decode('utf-16'))
-                    break
-
-
-
-
+        while flag:
+            # ソケットを監視
+            can_recv_sock, _, _ = select.select([s,], [], [], 0.5)
+            # # 受信が来たとき
+            if flag == False:
+                break
+            for ready in can_recv_sock:
+                chars = B""
+                while True:
+                    recv = ready.recv(bufsize)
+                    chars += recv
+                    if not len(recv) == bufsize :
+                        print("recv:" + chars.decode('utf-16'))
+                        break
+    except OSError:
+        pass
+    except ValueError:
+        pass
