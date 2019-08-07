@@ -37,8 +37,7 @@ class ShareMemory:
     def get_array(self, number: int):
         # ちゃんと例外にしたい
         if number >= 150:
-            print("範囲外参照")
-            print(number)
+            raise IndexError
         str_list = self.share_str[int(number / 50)]
         str_array = str_list[int(number % 50)]
         return str_array
@@ -46,31 +45,31 @@ class ShareMemory:
     """
     store:引数(byte) 返値 none
     入力されたbyteをlatestに記されたarrayにunsigned charに変換、格納する
-    すでに入力されていた場合は一度空にする
+    すでに入力されていた場合は上書きする
     """
     def store(self, utf16_string: bytes):
         with self.latest.get_lock():
             self.latest.value += 1
             if self.latest.value >= 150:
-                self.latest.value == 0
+                self.latest.value = 0
             target = self.get_array(self.latest.value)
 #        if len(target) != 0:
             with target.get_lock():
                 temp = array.array('B')
                 temp.frombytes(utf16_string)
-                # clearがmp.arrayになかったのでゆっくり考えます
-                # delしてarrayをlistに確保し直す可能性
-    #            target.clear()
+
+#デバッグ系
                 store_debug = B""
                 for hoge in temp:
                     store_debug += hoge.to_bytes(1, 'big')
-               # print("store:" + store_debug.decode('utf-16'))
+                print("store_text:" + store_debug.decode('utf-16le'))
                 print("store_byte:" + str(store_debug))
                 i = 0
                 for hoge in temp:
                     print("now_store:" + str(hoge))
                     target[i] += hoge
                     i += 1
+                print("stored: " + str(self.load(self.latest.value)))
                 
 
     """
@@ -78,29 +77,30 @@ class ShareMemory:
     入力されたintが示すarrayに格納されたcharをbytesに結合し返却する
     """
     def load(self, number: int):
+ #       import pdb; pdb.set_trace()
         target = self.get_array(number)
         join = B''
-        chars = B''
+        char = B''
         is_2byte = False  # 今のループが2バイト目か
         byte_num = 0
         loop = True
         while loop:
-            # 進捗　targetの指定の仕方があやしい
+            # 進捗　targetがダメ<-再格納時に破壊されている可能性
             # 読みだしたものを全部取得する
-            chars += target[byte_num].to_bytes(1, 'big')
+            char += target[byte_num].to_bytes(1, 'big')
             # 2バイト分だけ保持する（1文字分）
             join += target[byte_num].to_bytes(1, 'big')
             if is_2byte:
                 # ヌル文字で終了
-                if chars == "\n".encode('utf-16le'):
+                if char == "\n".encode('utf-16le'):
                     loop = False
                 is_2byte = False
-                chars = B""
+                char = B""
             else:
                 is_2byte = True
             byte_num += 1
 
-        print("loaded:" + join.decode('utf-16'))
+        print("loaded:" + join.decode('utf-16le'))
         return join
 
     """
@@ -110,12 +110,14 @@ class ShareMemory:
     """
     def load_until_latest(self):
         return_list = []
+        #import pdb; pdb.set_trace
         # 最新まで読み込んだら終了する
         while self.latest.value != self.where_loaded:
-            return_list.append(self.load(self.where_loaded + 1))
             self.where_loaded += 1
             if self.where_loaded >= 150:
+#                import pdb; pdb.set_trace()
                 self.where_loaded = 0
+            return_list.append(self.load(self.where_loaded))            
             # 一回余分にインクリメントしてるので引く
             # self.where_loaded -= 1
         return return_list
@@ -178,12 +180,12 @@ class TcpChatServer:
 #                char += receive
 #                if len(receive) == 0:
                 # 終了命令がきたらこのプロセスを終了する
-                if receive.decode('utf-16') == "sessionExit":
+                if receive.decode('utf-16le') == "sessionExit":
                     self.conn.close()
                     notEnd = False
                     exit()
                 sm.store(receive)
-                print("received:" + receive.decode('utf-16'))
+                print("received:" + receive.decode('utf-16le'))
                 break
 
     def send_message(self, message: bytes):
@@ -210,7 +212,7 @@ if __name__ == "__main__":
             print("main process:loaded")
             for load in loads:
                 print(load)
-            print(load.decode('utf-16'))
+            print(load.decode('utf-16le'))
             server.send_message(load)
         time.sleep(0.05) # cpu使用率 33.4%/1connection 達成記念
 

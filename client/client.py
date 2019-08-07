@@ -13,13 +13,13 @@ def send_std_input():
         input_str = input()
         if input_str == "exit":
             flag = False
-            s.send("sessionExit".encode('utf-16'))
+            s.send("sessionExit".encode('utf-16le'))
             s.close()
             print("socket closed")
             exit()
         else:
             input_str += "\n"
-            s.send(input_str.encode('utf-16'))
+            s.send(input_str.encode('utf-16le'))
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -46,7 +46,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     recv = ready.recv(bufsize)
                     chars += recv
                     if not len(recv) == bufsize :
-                        print("recv:" + chars.decode('utf-16'))
+                        print("recv:" + chars.decode('utf-16le'))
                         break
     except OSError:
         pass
